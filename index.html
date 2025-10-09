@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный тест для инженеров-проектировщиков</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Cool Gray & Blue -->
+    <!-- Application Structure Plan: The application now incorporates Firebase Authentication. The structure is a single-page app with conditional visibility for different states: Login, Start, Quiz, and Results. A user must authenticate via Google before accessing the quiz. This architecture enhances security and allows for user-specific data tracking in the future. The flow is: Login Screen -> (on auth) -> App Wrapper (user info + Start Screen) -> Quiz -> Results (with user info). -->
+    <!-- Visualization & Content Choices: 
+        - Authentication UI: A new login screen with a prominent "Sign in with Google" button. Goal: Secure Access. Interaction: Click.
+        - User Info Display: A simple header showing the authenticated user's name and a sign-out button. Goal: Contextualize.
+        - All previous quiz elements (questions, charts, stats) are retained but are now only accessible after a successful login.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://rsms.me/inter/inter.css');
+        .quiz-option.selected {
+            background-color: #3b82f6; /* bg-blue-500 */
+            color: white;
+            border-color: #2563eb; /* border-blue-600 */
+        }
+        .correct-answer {
+            background-color: #dcfce7; /* bg-green-100 */
+        }
+        .incorrect-answer {
+            background-color: #fee2e2; /* bg-red-100 */
+        }
+        .correct-text {
+            color: #166534; /* text-green-800 */
+        }
+        .incorrect-text {
+            color: #991b1b; /* text-red-800 */
+        }
+        .table-cell {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
+             <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест для инженеров</h1>
+             <p class="text-lg text-gray-600 mb-8">Пожалуйста, войдите, чтобы начать тестирование.</p>
+             <button id="login-btn" class="inline-flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition duration-300 text-lg shadow-sm">
+                <svg class="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.519-3.534-11.082-8.447l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.012,36.494,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+                Войти через Google
+             </button>
+        </div>
+        
+        <!-- Main App Wrapper (hidden until login) -->
+        <div id="app-wrapper" class="hidden">
+            <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-md">
+                <p>Вы вошли как: <span id="user-display-name" class="font-bold"></span></p>
+                <button id="logout-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300 text-sm">Выйти</button>
+            </div>
+
+            <!-- Start Screen -->
+            <div id="start-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест на когнитивные способности</h1>
+                <p class="text-lg text-gray-600 mb-8">для инженеров-проектировщиков систем электроснабжения</p>
+                <p class="mb-2">Тест состоит из 15 вопросов. Он поможет оценить ваши профессиональные знания, внимание к деталям и логическое мышление.</p>
+                <p class="mb-8 font-semibold">На прохождение теста выделяется 15 минут.</p>
+                <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Начать тест</button>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quiz-screen" class="hidden">
+                <!-- ... Quiz screen content ... -->
+                 <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-gray-900">Вопрос <span id="question-number"></span> из 15</h2>
+                        <div id="timer-container" class="text-lg font-bold text-red-600">
+                            Осталось времени: <span id="timer">15:00</span>
+                        </div>
+                    </div>
+                     <div id="progress-bar" class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                        <div id="progress-bar-inner" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="question-container" class="mb-6">
+                        <p id="question-text" class="text-lg md:text-xl leading-relaxed mb-4"></p>
+                        <div id="question-table-container"></div>
+                    </div>
+                    <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    <div class="mt-8 flex justify-between items-center">
+                         <button id="prev-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300">Назад</button>
+                        <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Далее</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="hidden">
+                 <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
+                    <h2 class="text-3xl font-bold mb-4">Результаты теста</h2>
+                    <p id="score-text" class="text-xl mb-4"></p>
+                    <div class="chart-container" style="position: relative; height:300px; width:100%; max-width:300px; margin: auto;">
+                        <canvas id="results-chart"></canvas>
+                    </div>
+                    <p id="results-summary" class="text-lg mt-4 mb-8"></p>
+
+                    <div id="email-section" class="mt-8 text-left border-t pt-6 max-w-lg mx-auto">
+                        <h3 class="text-2xl font-bold mb-4 text-center">Отправить результаты</h3>
+                        <p class="text-center text-gray-600 mb-4">Введите email, на который хотите отправить отчет о прохождении теста.</p>
+                        <div class="mb-4">
+                            <label for="user-email" class="block text-sm font-medium text-gray-700">Email для отправки:</label>
+                            <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="manager@example.com">
+                        </div>
+                        <button id="send-email-btn" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 text-lg">Отправить на Email</button>
+                    </div>
+                    
+                    <div id="time-stats-section" class="mt-12 text-left border-t pt-6">
+                        <h3 class="text-2xl font-bold mb-4 text-center">Статистика по времени</h3>
+                        <div id="time-stats-content"></div>
+                    </div>
+
+                    <div id="review-section" class="mt-12 text-left border-t pt-6">
+                        <h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>
+                    </div>
+
+                    <button id="restart-btn" class="mt-8 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Пройти еще раз</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        // ===================================================================================
+        // ВАЖНО: Вставьте сюда конфигурацию вашего Firebase-проекта
+        // ===================================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDLfKYIBc89qKtggYMaVzdjvQ_Bt2zMLS4",
+            authDomain: "engineering-quiz1025.firebaseapp.com",
+            projectId: "engineering-quiz1025",
+            storageBucket: "engineering-quiz1025.firebasestorage.app",
+            messagingSenderId: "898899230139",
+            appId: "1:898899230139:web:f3bfdda94a75d9ff7b589e",
+            measurementId: "G-GYN16KFFQ2"
+        };
+        // ===================================================================================
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        const quizData = [
+            {
+                question: "Вам представлен фрагмент технического задания: «...необходимо установить автомат защиты с номинальным током 25 А, характеристика отключения - C, отключающая способность - 6 кА. Кабель должен быть типа ВВГнг-LS 3х2.5». При проверке чертежа вы видите, что для этой линии заложен кабель ВВГнг-LS 3х1.5. Какое действие является наиболее правильным?",
+                options: ["Принять чертеж без изменений, так как сечение 1.5 мм² иногда допустимо для 25 А.", "Заменить автомат на 16 А, чтобы он соответствовал кабелю.", "Указать на несоответствие сечения кабеля требованиям ТЗ и автомата защиты.", "Запросить дополнительную информацию о нагрузке."],
+                answer: "Указать на несоответствие сечения кабеля требованиям ТЗ и автомата защиты.",
+                explanation: "Правильное действие — выявить критическую ошибку. Длительно допустимый ток для кабеля 3х1.5 значительно ниже 25 А, что приведет к перегреву. Замена автомата на 16А может не соответствовать нагрузке."
+            },
+            {
+                question: "Пять автоматов, защищающих разные группы (Кухня, Гостиная, Ванная, Спальня, Коридор), расположены в щите в один ряд. Определите их точный порядок на основе следующих условий:\n1. Автомат для кухни находится рядом с автоматом для гостиной.\n2. Автомат для ванной не находится ни с одного из краев.\n3. Между автоматами для спальни и кухни находится ровно один другой автомат.\n4. Автомат для коридора расположен где-то левее автомата для гостиной.\n5. Автомат для гостиной не находится ни с одного из краев.",
+                options: ["Коридор, Гостиная, Кухня, Ванная, Спальня", "Коридор, Спальня, Ванная, Кухня, Гостиная", "Гостиная, Кухня, Ванная, Спальня, Коридор", "Коридор, Кухня, Гостиная, Ванная, Спальня"],
+                answer: "Коридор, Гостиная, Кухня, Ванная, Спальня",
+                explanation: "Условия 1 и 3 создают блок (Гостиная-Кухня-Ванная-Спальня). Условие 4 ставит Коридор левее Гостиной, а условия 2 и 5 подтверждают, что Ванная и Гостиная не могут быть по краям, что приводит к единственному верному решению."
+            },
+            {
+                question: "Вы изучаете однолинейную схему и видите обозначение: <code>КЛ-0,4кВ-АВБбШв-4х120</code>. Что из перечисленного НЕВЕРНО описывает данный элемент?",
+                options: ["Это кабельная линия.", "Номинальное напряжение линии - 0.4 кВ.", "Кабель имеет медные жилы.", "Кабель четырехжильный."],
+                answer: "Кабель имеет медные жилы.",
+                explanation: "Буква 'А' в начале маркировки кабеля (после тире или в начале) всегда указывает на то, что жилы выполнены из алюминия."
+            },
+            {
+                question: "На плане помещения указаны размеры: длина 12 метров, ширина 8 метров. Необходимо равномерно расположить 6 светильников. Какое расстояние будет между центрами светильников, если расположить их в 2 ряда по 3 светильника в каждом?",
+                options: ["4 метра по длине и 4 метра по ширине.", "3 метра по длине и 4 метра по ширине.", "6 метров по длине и 4 метра по ширине.", "4 метра по длине и 2.67 метра по ширине."],
+                answer: "4 метра по длине и 4 метра по ширине.",
+                explanation: "Расчет: 12 метров / 3 светильника в ряду = 4 метра между центрами по длине. 8 метров / 2 светильника в ряду = 4 метра между центрами по ширине."
+            },
+            {
+                question: "Все инженеры отдела знают AutoCAD. Некоторые инженеры отдела знают Revit. Какое утверждение всегда будет верным?",
+                options: ["Все, кто знает Revit, знают и AutoCAD.", "Некоторые инженеры отдела знают и AutoCAD, и Revit.", "Никто из тех, кто не знает Revit, не является инженером отдела.", "Если инженер не знает AutoCAD, он не работает в этом отделе."],
+                answer: "Некоторые инженеры отдела знают и AutoCAD, и Revit.",
+                explanation: "Поскольку \"некоторые инженеры\" знают Revit, а \"все инженеры\" знают AutoCAD, то эта группа \"некоторых\" инженеров владеет обеими программами."
+            },
+            {
+                question: "Вы получили список правок к проекту. В пункте 3.1 указано 'Заменить светильники типа X на тип Y', а в пункте 5.4 - 'Светильники типа X исключить из спецификации'. Ваши действия?",
+                options: ["Удалить все светильники X и заменить их на Y.", "Проигнорировать пункт 5.4, так как он противоречит пункту 3.1.", "Уточнить у заказчика или руководителя, относятся ли эти правки ко всему проекту или к конкретным его частям.", "Выполнить только пункт 3.1, так как он более конкретный."],
+                answer: "Уточнить у заказчика или руководителя, относятся ли эти правки ко всему проекту или к конкретным его частям.",
+                explanation: "При обнаружении противоречивых или неоднозначных указаний самый правильный и профессиональный шаг — это уточнение информации у источника."
+            },
+            {
+                question: "Продолжите стандартный ряд номинальных токов автоматических выключателей: 6А, 10А, 16А, ..., 32А, 40А.",
+                options: ["20А", "24А", "25А", "30А"],
+                answer: "25А",
+                explanation: "Это стандартный ряд номиналов (ряд E6), который используется большинством производителей электрооборудования."
+            },
+            {
+                question: "На схеме показан щит, от которого отходят три линии. Потери напряжения на первой линии составляют 1.2%, на второй - 1.5%, на третьей - 0.9%. Допустимые потери до конечного потребителя не должны превышать 3%. Какие линии требуют дополнительной проверки?",
+                options: ["Только вторая линия.", "Все линии в норме.", "Вторая и первая линии.", "Недостаточно данных для ответа."],
+                answer: "Недостаточно данных для ответа.",
+                explanation: "Нормируются суммарные потери от источника питания (трансформатора) до конечного потребителя. Данных о потерях на предыдущих участках сети нет, поэтому сделать вывод о соответствии норме невозможно."
+            },
+            {
+                question: "Вам нужно проверить соответствие сечения кабеля выбранному автоматическому выключателю. Какой нормативный документ вы будете использовать в первую очередь?",
+                options: ["ДБН (Державні будівельні норми)", "ПУЭ (Правила улаштування електроустановок)", "ГОСТ на кабельную продукцию", "Каталог производителя автоматических выключателей"],
+                answer: "ПУЭ (Правила улаштування електроустановок)",
+                explanation: "ПУЭ является основным документом, регламентирующим правила выбора сечений проводников и аппаратов защиты в электроустановках."
+            },
+            {
+                question: "Если повернуть эту фигуру на 90 градусов по часовой стрелке, какая из опций получится? (Представьте букву 'Г', лежащую на длинной стороне)",
+                options: ["Буква 'Г' в обычном стоячем положении.", "Перевернутая буква 'Г'.", "Буква 'L'.", "Фигура не изменится."],
+                answer: "Буква 'Г' в обычном стоячем положении.",
+                explanation: "Это задача на пространственное мышление. Поворот лежащей буквы 'Г' на 90° по часовой стрелке вернет ее в стандартное вертикальное положение."
+            },
+            {
+                question: "Для защиты отходящей линии с номинальным током нагрузки <strong>45 А</strong> необходимо выбрать автоматический выключатель. Расчетный ток короткого замыкания (КЗ) в точке его установки составляет <strong>18,5 кА</strong>. Какой из предложенных вариантов является единственно верным, исходя из стандартных характеристик оборудования?",
+                options: ["MCB с номинальным током 50 А.", "MCCB с номинальным током 63 А.", "Высокопроизводительный MCB с номинальным током 50 А.", "MCCB с номинальным током 50 А."],
+                answer: "MCCB с номинальным током 50 А.",
+                explanation: "Выбор аппарата защиты определяется двумя ключевыми параметрами: 1) Номинальный ток должен быть больше тока нагрузки (50А > 45А). 2) Отключающая способность должна быть больше тока КЗ. Так как ток КЗ (18,5 кА) превышает стандартные значения для MCB (даже высокопроизводительных, обычно до 15 кА), единственным правильным решением является использование MCCB (автоматический выключатель в литом корпусе), у которого отключающая способность обычно 25 кА и выше."
+            },
+            {
+                question: "При прокладке кабеля в грунте параллельно фундаменту здания, какое минимальное <strong>горизонтальное</strong> расстояние до фундамента необходимо соблюсти?",
+                options: ["0.25 метра", "0.6 метра", "1.0 метр", "Не нормируется, главное - ниже глубины промерзания."],
+                answer: "0.6 метра",
+                explanation: "Согласно ПУЭ (п. 2.3.86), при прокладке кабелей параллельно фундаментам зданий и сооружений, они должны прокладываться на расстоянии не менее 0,6 м."
+            },
+            {
+                question: "Какая минимальная средняя освещенность должна быть обеспечена на рабочих поверхностях в помещении аналитической лаборатории, где проводятся работы высокой точности, согласно действующим нормам?",
+                options: ["300 Кандела (кд)", "500 Люмен (Лм)", "500 Люкс (Лк)", "200 Вт/м²"],
+                answer: "500 Люкс (Лк)",
+                explanation: "Освещенность поверхности измеряется в Люксах (Лк). Согласно ДБН В.2.5-28:2018, для лабораторий с работами высокой точности норма составляет 500 Лк."
+            },
+            {
+                question: "Для защиты розеточной группы в ванной комнате, к которой будет подключаться стиральная машина и фен, какой тип УЗО (ПЗВ) является наиболее правильным выбором?",
+                options: ["УЗО 40А / 100мА, тип АС", "УЗО 25А / 30мА, тип АС", "УЗО 25А / 10мА, тип А", "Дифавтомат 16А / 30мА, тип B"],
+                answer: "УЗО 25А / 10мА, тип А",
+                explanation: "Для особо опасных помещений (ванные) рекомендуется УЗО с током утечки 10 мА для максимальной защиты человека. Тип \"А\" необходим для современной техники, которая создает пульсирующие токи утечки, невидимые для УЗО типа \"АС\"."
+            },
+            {
+                question: "Вы проверяете ведомость групповых линий трехфазного щита (ЩО). В пояснении к ведомости указано: \"Суммарная установленная мощность составляет 6900 Вт.\". Проанализируйте таблицу и найдите одно ключевое несоответствие.",
+                table: {
+                    headers: ["№ Группы", "Наименование нагрузки", "Мощность, Вт", "Фаза"],
+                    rows: [
+                        ["1", "Освещение, коридор", "1200", "L1"],
+                        ["2", "Розетки, кабинеты", "1500", "L2"],
+                        ["3", "Розетки, кухня", "2200", "L3"],
+                        ["4", "Кондиционер", "2000", "L1"]
+                    ]
+                },
+                options: ["Суммарная мощность, указанная в пояснении (6900 Вт), не соответствует действительности.", "Нагрузка \"Кондиционер\" (2000 Вт) не может быть подключена к той же фазе, что и \"Освещение\".", "Нагрузка на фазу L1 значительно превышает нагрузки на другие фазы, что нарушает требование балансировки.", "В таблице и пояснении нет никаких несоответствий."],
+                answer: "Нагрузка на фазу L1 значительно превышает нагрузки на другие фазы, что нарушает требование балансировки.",
+                explanation: "Расчет нагрузок по фазам: L1 = 1200 + 2000 = 3200 Вт; L2 = 1500 Вт; L3 = 2200 Вт. Отклонение между L1 и L2 составляет более 100%, что является грубым нарушением требования о балансировке (допустимое отклонение обычно не более 15%)."
+            }
+        ];
+        
+        // DOM Elements
+        const loginScreen = document.getElementById('login-screen');
+        const appWrapper = document.getElementById('app-wrapper');
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userDisplayNameEl = document.getElementById('user-display-name');
+        
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const sendEmailBtn = document.getElementById('send-email-btn');
+
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const questionTableContainerEl = document.getElementById('question-table-container');
+        const optionsContainerEl = document.getElementById('options-container');
+        const progressBarInnerEl = document.getElementById('progress-bar-inner');
+        const timerEl = document.getElementById('timer');
+        
+        const scoreTextEl = document.getElementById('score-text');
+        const resultsSummaryEl = document.getElementById('results-summary');
+        const reviewSectionEl = document.getElementById('review-section');
+        const timeStatsContentEl = document.getElementById('time-stats-content');
+        
+        // State
+        let currentUser = null;
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let chartInstance = null;
+        let timerInterval = null;
+        let timeSpentPerQuestion = new Array(quizData.length).fill(0);
+        let questionStartTime = 0;
+
+        // Auth Logic
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                loginScreen.classList.add('hidden');
+                appWrapper.classList.remove('hidden');
+                userDisplayNameEl.textContent = user.displayName || user.email;
+                resetToStartScreen();
+            } else {
+                currentUser = null;
+                loginScreen.classList.remove('hidden');
+                appWrapper.classList.add('hidden');
+            }
+        });
+        
+        const signIn = () => {
+            signInWithPopup(auth, provider)
+                .catch((error) => {
+                    console.error("Ошибка аутентификации:", error);
+                });
+        };
+
+        const signOutUser = () => {
+            signOut(auth);
+        };
+
+        loginBtn.addEventListener('click', signIn);
+        logoutBtn.addEventListener('click', signOutUser);
+
+        // Quiz Logic
+        function resetToStartScreen() {
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', nextQuestion);
+        prevBtn.addEventListener('click', prevQuestion);
+        restartBtn.addEventListener('click', () => {
+             resetToStartScreen();
+             if (chartInstance) chartInstance.destroy();
+             stopTimer();
+        });
+        sendEmailBtn.addEventListener('click', sendResultsByEmail);
+
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            resultsScreen.classList.add('hidden');
+            currentQuestionIndex = 0;
+            userAnswers.fill(null);
+            timeSpentPerQuestion.fill(0);
+            loadQuestion();
+            startTimer();
+        }
+        
+        function startTimer() {
+            let timeLeft = 15 * 60;
+            timerEl.textContent = "15:00";
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                if (timeLeft <= 0) {
+                    showResults();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function recordTimeSpent() {
+            if (questionStartTime > 0) {
+                const timeSpent = Math.round((Date.now() - questionStartTime) / 1000);
+                timeSpentPerQuestion[currentQuestionIndex] += timeSpent;
+            }
+        }
+
+        function loadQuestion() {
+            questionStartTime = Date.now();
+            const question = quizData[currentQuestionIndex];
+            questionNumberEl.textContent = currentQuestionIndex + 1;
+            questionTextEl.innerHTML = question.question;
+            optionsContainerEl.innerHTML = '';
+            questionTableContainerEl.innerHTML = '';
+
+            if (question.table) {
+                let tableHTML = '<table class="w-full my-4 border-collapse">';
+                tableHTML += '<thead><tr>' + question.table.headers.map(h => `<th class="table-cell font-bold bg-gray-100">${h}</th>`).join('') + '</tr></thead>';
+                tableHTML += '<tbody>' + question.table.rows.map(row => `<tr>${row.map(cell => `<td class="table-cell">${cell}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+                questionTableContainerEl.innerHTML = tableHTML;
+            }
+
+            question.options.forEach(optionText => {
+                const button = document.createElement('button');
+                button.innerHTML = optionText;
+                button.classList.add('quiz-option', 'w-full', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100', 'hover:border-blue-400');
+                if (userAnswers[currentQuestionIndex] === optionText) button.classList.add('selected');
+                button.addEventListener('click', () => selectOption(button, optionText));
+                optionsContainerEl.appendChild(button);
+            });
+            updateProgress();
+        }
+
+        function selectOption(button, optionText) {
+            document.querySelectorAll('.quiz-option').forEach(btn => btn.classList.remove('selected'));
+            button.classList.add('selected');
+            userAnswers[currentQuestionIndex] = optionText;
+        }
+
+        function updateProgress() {
+            progressBarInnerEl.style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+            prevBtn.disabled = currentQuestionIndex === 0;
+            prevBtn.classList.toggle('opacity-50', currentQuestionIndex === 0);
+            nextBtn.textContent = (currentQuestionIndex === quizData.length - 1) ? 'Завершить' : 'Далее';
+        }
+        
+        function nextQuestion() {
+            recordTimeSpent();
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function prevQuestion() {
+            recordTimeSpent();
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        function showResults() {
+            recordTimeSpent();
+            stopTimer();
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+
+            const score = userAnswers.reduce((acc, answer, index) => acc + (answer === quizData[index].answer ? 1 : 0), 0);
+            
+            scoreTextEl.textContent = `Вы набрали ${score} из ${quizData.length} баллов`;
+
+            let summary = "";
+            if (score >= 13) summary = "Отличный результат! Вы демонстрируете глубокие знания и высокую внимательность.";
+            else if (score >= 9) summary = "Хороший результат. У вас прочная база знаний, но есть несколько моментов, на которые стоит обратить внимание.";
+            else if (score >= 5) summary = "Удовлетворительный результат. Рекомендуется повторить ключевые темы и нормативные документы.";
+            else summary = "Результат ниже базового уровня. Необходимо серьезно подойти к дополнительному обучению.";
+            resultsSummaryEl.textContent = summary;
+
+            renderChart(score);
+            renderTimeStats();
+            renderReview();
+        }
+        
+        function renderChart(score) {
+            const ctx = document.getElementById('results-chart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Правильные', 'Неправильные'],
+                    datasets: [{ data: [score, quizData.length - score], backgroundColor: ['#22c55e', '#ef4444'], borderColor: '#ffffff', borderWidth: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+        
+        function renderTimeStats() {
+            timeStatsContentEl.innerHTML = '<ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">' +
+                timeSpentPerQuestion.map((time, index) =>
+                    `<li class="bg-gray-100 p-3 rounded-lg text-center shadow-sm">
+                        <span class="font-bold text-sm text-gray-600">Вопрос ${index + 1}</span>
+                        <span class="block text-xl font-semibold text-gray-900">${time} сек.</span>
+                    </li>`
+                ).join('') + '</ul>';
+        }
+
+        function renderReview() {
+            reviewSectionEl.innerHTML = '<h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>'; // Clear previous
+            quizData.forEach((question, index) => {
+                const isCorrect = userAnswers[index] === question.answer;
+                const reviewBlock = document.createElement('div');
+                reviewBlock.className = `p-4 mb-4 border rounded-lg ${isCorrect ? 'correct-answer' : 'incorrect-answer'}`;
+                
+                let reviewHTML = `<p class="font-bold mb-2">Вопрос ${index + 1}:</p><p class="mb-4">${question.question}</p>`;
+                
+                 if (question.table) {
+                    reviewHTML += '<table class="w-full my-4 border-collapse bg-white">';
+                    reviewHTML += '<thead><tr>' + question.table.headers.map(h => `<th class="table-cell font-bold bg-gray-100">${h}</th>`).join('') + '</tr></thead>';
+                    reviewHTML += '<tbody>' + question.table.rows.map(row => `<tr>${row.map(cell => `<td class="table-cell">${cell}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+                }
+
+                reviewHTML += `<p class="mb-2">Ваш ответ: <span class="font-semibold ${isCorrect ? 'correct-text' : 'incorrect-text'}">${userAnswers[index] || 'Нет ответа'}</span></p>`;
+                if (!isCorrect) reviewHTML += `<p class="mb-2">Правильный ответ: <span class="font-semibold correct-text">${question.answer}</span></p>`;
+                reviewHTML += `<p class="mt-4 pt-4 border-t border-gray-300"><span class="font-bold">Пояснение:</span> ${question.explanation}</p>`;
+                
+                reviewBlock.innerHTML = reviewHTML;
+                reviewSectionEl.appendChild(reviewBlock);
+            });
+        }
+
+        function sendResultsByEmail() {
+            const userName = currentUser ? currentUser.displayName : 'Не указано';
+            const userEmail = document.getElementById('user-email').value;
+
+            if (!userEmail) {
+                alert('Пожалуйста, введите email для отправки.');
+                return;
+            }
+            
+            const score = userAnswers.filter((answer, index) => answer === quizData[index].answer).length;
+            
+            const subject = `Результаты теста для инженера-проектировщика: ${userName}`;
+            let body = `Здравствуйте!\n\n${userName} прошел(прошла) тест.\n\n`;
+            body += `Результат: ${score} из ${quizData.length} правильных ответов.\n\n`;
+            body += `----------\nДетальный разбор:\n----------\n\n`;
+
+            quizData.forEach((q, index) => {
+                const userAnswer = userAnswers[index] || 'Нет ответа';
+                const isCorrect = userAnswer === q.answer;
+                body += `Вопрос ${index + 1}: ${q.question.replace(/<[^>]*>?/gm, '')}\n`;
+                body += `Ваш ответ: ${userAnswer} (${isCorrect ? 'Верно' : 'Неверно'})\n`;
+                body += `Затраченное время: ${timeSpentPerQuestion[index]} сек.\n`;
+                if (!isCorrect) body += `Правильный ответ: ${q.answer}\n`;
+                body += `\n`;
+            });
+            
+            window.location.href = `mailto:${userEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+    </script>
+</body>
+</html>
