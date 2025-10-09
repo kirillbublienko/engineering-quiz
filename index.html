@@ -7,11 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Chosen Palette: Cool Gray & Blue -->
-    <!-- Application Structure Plan: The application now incorporates Firebase Authentication. The structure is a single-page app with conditional visibility for different states: Login, Start, Quiz, and Results. A user must authenticate via Google before accessing the quiz. This architecture enhances security and allows for user-specific data tracking in the future. The flow is: Login Screen -> (on auth) -> App Wrapper (user info + Start Screen) -> Quiz -> Results (with user info). -->
+    <!-- Application Structure Plan: This version reverts to a standalone, single-page quiz without server-side authentication. The user flow is simplified to Start Screen -> Quiz -> Results. All Firebase-related code and UI elements have been removed to ensure the application works locally without any backend setup. -->
     <!-- Visualization & Content Choices: 
-        - Authentication UI: A new login screen with a prominent "Sign in with Google" button. Goal: Secure Access. Interaction: Click.
-        - User Info Display: A simple header showing the authenticated user's name and a sign-out button. Goal: Contextualize.
-        - All previous quiz elements (questions, charts, stats) are retained but are now only accessible after a successful login.
+        - All quiz, chart, and statistics elements are retained from the previous version.
+        - The authentication UI (login screen, user info header) has been removed.
+        - The email reporting form now includes an input for the user's name, as it's no longer available from a Google account.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -47,117 +47,83 @@
 
     <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-4xl">
 
-        <!-- Login Screen -->
-        <div id="login-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
-             <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест для инженеров</h1>
-             <p class="text-lg text-gray-600 mb-8">Пожалуйста, войдите, чтобы начать тестирование.</p>
-             <button id="login-btn" class="inline-flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition duration-300 text-lg shadow-sm">
-                <svg class="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.519-3.534-11.082-8.447l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.012,36.494,44,30.638,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
-                Войти через Google
-             </button>
+        <!-- Start Screen -->
+        <div id="start-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест на когнитивные способности</h1>
+            <p class="text-lg text-gray-600 mb-8">для инженеров-проектировщиков систем электроснабжения</p>
+            <p class="mb-2">Тест состоит из 15 вопросов. Он поможет оценить ваши профессиональные знания, внимание к деталям и логическое мышление.</p>
+            <p class="mb-8 font-semibold">На прохождение теста выделяется 15 минут.</p>
+            <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Начать тест</button>
         </div>
-        
-        <!-- Main App Wrapper (hidden until login) -->
-        <div id="app-wrapper" class="hidden">
-            <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-md">
-                <p>Вы вошли как: <span id="user-display-name" class="font-bold"></span></p>
-                <button id="logout-btn" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300 text-sm">Выйти</button>
-            </div>
 
-            <!-- Start Screen -->
-            <div id="start-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест на когнитивные способности</h1>
-                <p class="text-lg text-gray-600 mb-8">для инженеров-проектировщиков систем электроснабжения</p>
-                <p class="mb-2">Тест состоит из 15 вопросов. Он поможет оценить ваши профессиональные знания, внимание к деталям и логическое мышление.</p>
-                <p class="mb-8 font-semibold">На прохождение теста выделяется 15 минут.</p>
-                <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Начать тест</button>
-            </div>
-
-            <!-- Quiz Screen -->
-            <div id="quiz-screen" class="hidden">
-                <!-- ... Quiz screen content ... -->
-                 <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-900">Вопрос <span id="question-number"></span> из 15</h2>
-                        <div id="timer-container" class="text-lg font-bold text-red-600">
-                            Осталось времени: <span id="timer">15:00</span>
-                        </div>
-                    </div>
-                     <div id="progress-bar" class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
-                        <div id="progress-bar-inner" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
-                    </div>
-                    <div id="question-container" class="mb-6">
-                        <p id="question-text" class="text-lg md:text-xl leading-relaxed mb-4"></p>
-                        <div id="question-table-container"></div>
-                    </div>
-                    <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-                    <div class="mt-8 flex justify-between items-center">
-                         <button id="prev-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300">Назад</button>
-                        <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Далее</button>
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-900">Вопрос <span id="question-number"></span> из 15</h2>
+                    <div id="timer-container" class="text-lg font-bold text-red-600">
+                        Осталось времени: <span id="timer">15:00</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Results Screen -->
-            <div id="results-screen" class="hidden">
-                 <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
-                    <h2 class="text-3xl font-bold mb-4">Результаты теста</h2>
-                    <p id="score-text" class="text-xl mb-4"></p>
-                    <div class="chart-container" style="position: relative; height:300px; width:100%; max-width:300px; margin: auto;">
-                        <canvas id="results-chart"></canvas>
-                    </div>
-                    <p id="results-summary" class="text-lg mt-4 mb-8"></p>
-
-                    <div id="email-section" class="mt-8 text-left border-t pt-6 max-w-lg mx-auto">
-                        <h3 class="text-2xl font-bold mb-4 text-center">Отправить результаты</h3>
-                        <p class="text-center text-gray-600 mb-4">Введите email, на который хотите отправить отчет о прохождении теста.</p>
-                        <div class="mb-4">
-                            <label for="user-email" class="block text-sm font-medium text-gray-700">Email для отправки:</label>
-                            <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="manager@example.com">
-                        </div>
-                        <button id="send-email-btn" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 text-lg">Отправить на Email</button>
-                    </div>
-                    
-                    <div id="time-stats-section" class="mt-12 text-left border-t pt-6">
-                        <h3 class="text-2xl font-bold mb-4 text-center">Статистика по времени</h3>
-                        <div id="time-stats-content"></div>
-                    </div>
-
-                    <div id="review-section" class="mt-12 text-left border-t pt-6">
-                        <h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>
-                    </div>
-
-                    <button id="restart-btn" class="mt-8 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Пройти еще раз</button>
+                 <div id="progress-bar" class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="progress-bar-inner" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
                 </div>
+                <div id="question-container" class="mb-6">
+                    <p id="question-text" class="text-lg md:text-xl leading-relaxed mb-4"></p>
+                    <div id="question-table-container"></div>
+                </div>
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Options will be injected here -->
+                </div>
+                <div class="mt-8 flex justify-between items-center">
+                     <button id="prev-btn" class="bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300">Назад</button>
+                    <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">Далее</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="hidden">
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg text-center">
+                <h2 class="text-3xl font-bold mb-4">Результаты теста</h2>
+                <p id="score-text" class="text-xl mb-4"></p>
+                <div class="chart-container" style="position: relative; height:300px; width:100%; max-width:300px; margin: auto;">
+                    <canvas id="results-chart"></canvas>
+                </div>
+                <p id="results-summary" class="text-lg mt-4 mb-8"></p>
+
+                <div id="email-section" class="mt-8 text-left border-t pt-6 max-w-lg mx-auto">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Отправить результаты</h3>
+                    <p class="text-center text-gray-600 mb-4">Введите ваше имя и email, на который хотите отправить отчет о прохождении теста.</p>
+                    <div class="mb-4">
+                        <label for="user-name" class="block text-sm font-medium text-gray-700">Ваше имя:</label>
+                        <input type="text" id="user-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Иван Иванов">
+                    </div>
+                    <div class="mb-4">
+                        <label for="user-email" class="block text-sm font-medium text-gray-700">Email для отправки:</label>
+                        <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="manager@example.com">
+                    </div>
+                    <button id="send-email-btn" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 text-lg">Отправить на Email</button>
+                    <p class="text-center text-xs text-gray-500 mt-2">Нажатие на кнопку откроет вашу почтовую программу по умолчанию с готовым письмом. Вам останется только нажать "Отправить".</p>
+                </div>
+                
+                <div id="time-stats-section" class="mt-12 text-left border-t pt-6">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Статистика по времени</h3>
+                    <div id="time-stats-content"></div>
+                </div>
+
+                <div id="review-section" class="mt-12 text-left border-t pt-6">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>
+                    <!-- Review content will be injected here -->
+                </div>
+
+                <button id="restart-btn" class="mt-8 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Пройти еще раз</button>
             </div>
         </div>
 
     </div>
 
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-        // ===================================================================================
-        // ВАЖНО: Вставьте сюда конфигурацию вашего Firebase-проекта
-        // ===================================================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyDLfKYIBc89qKtggYMaVzdjvQ_Bt2zMLS4",
-            authDomain: "engineering-quiz1025.firebaseapp.com",
-            projectId: "engineering-quiz1025",
-            storageBucket: "engineering-quiz1025.firebasestorage.app",
-            messagingSenderId: "898899230139",
-            appId: "1:898899230139:web:f3bfdda94a75d9ff7b589e",
-            measurementId: "G-GYN16KFFQ2"
-        };
-        // ===================================================================================
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
+    <script>
         const quizData = [
             {
                 question: "Вам представлен фрагмент технического задания: «...необходимо установить автомат защиты с номинальным током 25 А, характеристика отключения - C, отключающая способность - 6 кА. Кабель должен быть типа ВВГнг-LS 3х2.5». При проверке чертежа вы видите, что для этой линии заложен кабель ВВГнг-LS 3х1.5. Какое действие является наиболее правильным?",
@@ -259,17 +225,10 @@
                 explanation: "Расчет нагрузок по фазам: L1 = 1200 + 2000 = 3200 Вт; L2 = 1500 Вт; L3 = 2200 Вт. Отклонение между L1 и L2 составляет более 100%, что является грубым нарушением требования о балансировке (допустимое отклонение обычно не более 15%)."
             }
         ];
-        
-        // DOM Elements
-        const loginScreen = document.getElementById('login-screen');
-        const appWrapper = document.getElementById('app-wrapper');
+
         const startScreen = document.getElementById('start-screen');
         const quizScreen = document.getElementById('quiz-screen');
         const resultsScreen = document.getElementById('results-screen');
-        
-        const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-        const userDisplayNameEl = document.getElementById('user-display-name');
         
         const startBtn = document.getElementById('start-btn');
         const nextBtn = document.getElementById('next-btn');
@@ -288,9 +247,7 @@
         const resultsSummaryEl = document.getElementById('results-summary');
         const reviewSectionEl = document.getElementById('review-section');
         const timeStatsContentEl = document.getElementById('time-stats-content');
-        
-        // State
-        let currentUser = null;
+
         let currentQuestionIndex = 0;
         let userAnswers = new Array(quizData.length).fill(null);
         let chartInstance = null;
@@ -298,50 +255,10 @@
         let timeSpentPerQuestion = new Array(quizData.length).fill(0);
         let questionStartTime = 0;
 
-        // Auth Logic
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                loginScreen.classList.add('hidden');
-                appWrapper.classList.remove('hidden');
-                userDisplayNameEl.textContent = user.displayName || user.email;
-                resetToStartScreen();
-            } else {
-                currentUser = null;
-                loginScreen.classList.remove('hidden');
-                appWrapper.classList.add('hidden');
-            }
-        });
-        
-        const signIn = () => {
-            signInWithPopup(auth, provider)
-                .catch((error) => {
-                    console.error("Ошибка аутентификации:", error);
-                });
-        };
-
-        const signOutUser = () => {
-            signOut(auth);
-        };
-
-        loginBtn.addEventListener('click', signIn);
-        logoutBtn.addEventListener('click', signOutUser);
-
-        // Quiz Logic
-        function resetToStartScreen() {
-            quizScreen.classList.add('hidden');
-            resultsScreen.classList.add('hidden');
-            startScreen.classList.remove('hidden');
-        }
-
         startBtn.addEventListener('click', startQuiz);
         nextBtn.addEventListener('click', nextQuestion);
         prevBtn.addEventListener('click', prevQuestion);
-        restartBtn.addEventListener('click', () => {
-             resetToStartScreen();
-             if (chartInstance) chartInstance.destroy();
-             stopTimer();
-        });
+        restartBtn.addEventListener('click', restartQuiz);
         sendEmailBtn.addEventListener('click', sendResultsByEmail);
 
         function startQuiz() {
@@ -355,8 +272,17 @@
             startTimer();
         }
         
+        function restartQuiz() {
+            resultsScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            stopTimer();
+        }
+
         function startTimer() {
-            let timeLeft = 15 * 60;
+            let timeLeft = 15 * 60; 
             timerEl.textContent = "15:00";
             
             timerInterval = setInterval(() => {
@@ -387,13 +313,25 @@
             const question = quizData[currentQuestionIndex];
             questionNumberEl.textContent = currentQuestionIndex + 1;
             questionTextEl.innerHTML = question.question;
+
             optionsContainerEl.innerHTML = '';
             questionTableContainerEl.innerHTML = '';
 
             if (question.table) {
                 let tableHTML = '<table class="w-full my-4 border-collapse">';
-                tableHTML += '<thead><tr>' + question.table.headers.map(h => `<th class="table-cell font-bold bg-gray-100">${h}</th>`).join('') + '</tr></thead>';
-                tableHTML += '<tbody>' + question.table.rows.map(row => `<tr>${row.map(cell => `<td class="table-cell">${cell}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+                tableHTML += '<thead><tr>';
+                question.table.headers.forEach(header => {
+                    tableHTML += `<th class="table-cell font-bold bg-gray-100">${header}</th>`;
+                });
+                tableHTML += '</tr></thead><tbody>';
+                question.table.rows.forEach(row => {
+                    tableHTML += '<tr>';
+                    row.forEach(cell => {
+                        tableHTML += `<td class="table-cell">${cell}</td>`;
+                    });
+                    tableHTML += '</tr>';
+                });
+                tableHTML += '</tbody></table>';
                 questionTableContainerEl.innerHTML = tableHTML;
             }
 
@@ -401,7 +339,9 @@
                 const button = document.createElement('button');
                 button.innerHTML = optionText;
                 button.classList.add('quiz-option', 'w-full', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition', 'duration-200', 'hover:bg-blue-100', 'hover:border-blue-400');
-                if (userAnswers[currentQuestionIndex] === optionText) button.classList.add('selected');
+                if (userAnswers[currentQuestionIndex] === optionText) {
+                    button.classList.add('selected');
+                }
                 button.addEventListener('click', () => selectOption(button, optionText));
                 optionsContainerEl.appendChild(button);
             });
@@ -415,10 +355,16 @@
         }
 
         function updateProgress() {
-            progressBarInnerEl.style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+            const progress = ((currentQuestionIndex + 1) / quizData.length) * 100;
+            progressBarInnerEl.style.width = `${progress}%`;
             prevBtn.disabled = currentQuestionIndex === 0;
             prevBtn.classList.toggle('opacity-50', currentQuestionIndex === 0);
-            nextBtn.textContent = (currentQuestionIndex === quizData.length - 1) ? 'Завершить' : 'Далее';
+            
+            if (currentQuestionIndex === quizData.length - 1) {
+                nextBtn.textContent = 'Завершить';
+            } else {
+                nextBtn.textContent = 'Далее';
+            }
         }
         
         function nextQuestion() {
@@ -445,7 +391,12 @@
             quizScreen.classList.add('hidden');
             resultsScreen.classList.remove('hidden');
 
-            const score = userAnswers.reduce((acc, answer, index) => acc + (answer === quizData[index].answer ? 1 : 0), 0);
+            let score = 0;
+            userAnswers.forEach((answer, index) => {
+                if (answer === quizData[index].answer) {
+                    score++;
+                }
+            });
             
             scoreTextEl.textContent = `Вы набрали ${score} из ${quizData.length} баллов`;
 
@@ -463,25 +414,46 @@
         
         function renderChart(score) {
             const ctx = document.getElementById('results-chart').getContext('2d');
-            if (chartInstance) chartInstance.destroy();
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Правильные', 'Неправильные'],
-                    datasets: [{ data: [score, quizData.length - score], backgroundColor: ['#22c55e', '#ef4444'], borderColor: '#ffffff', borderWidth: 4 }]
+                    datasets: [{
+                        data: [score, quizData.length - score],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderColor: ['#ffffff'],
+                        borderWidth: 4
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            enabled: true,
+                        }
+                    }
+                }
             });
         }
         
         function renderTimeStats() {
-            timeStatsContentEl.innerHTML = '<ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">' +
-                timeSpentPerQuestion.map((time, index) =>
-                    `<li class="bg-gray-100 p-3 rounded-lg text-center shadow-sm">
-                        <span class="font-bold text-sm text-gray-600">Вопрос ${index + 1}</span>
-                        <span class="block text-xl font-semibold text-gray-900">${time} сек.</span>
-                    </li>`
-                ).join('') + '</ul>';
+            let statsHTML = '<ul class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">';
+            timeSpentPerQuestion.forEach((time, index) => {
+                statsHTML += `<li class="bg-gray-100 p-3 rounded-lg text-center shadow-sm">
+                                <span class="font-bold text-sm text-gray-600">Вопрос ${index + 1}</span>
+                                <span class="block text-xl font-semibold text-gray-900">${time} сек.</span>
+                              </li>`;
+            });
+            statsHTML += '</ul>';
+            timeStatsContentEl.innerHTML = statsHTML;
         }
 
         function renderReview() {
@@ -509,7 +481,7 @@
         }
 
         function sendResultsByEmail() {
-            const userName = currentUser ? currentUser.displayName : 'Не указано';
+            const userName = document.getElementById('user-name').value || 'Не указано';
             const userEmail = document.getElementById('user-email').value;
 
             if (!userEmail) {
@@ -536,6 +508,7 @@
             
             window.location.href = `mailto:${userEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
+
     </script>
 </body>
 </html>
