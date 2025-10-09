@@ -7,11 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Chosen Palette: Cool Gray & Blue -->
-    <!-- Application Structure Plan: This version reverts to a standalone, single-page quiz without server-side authentication. The user flow is simplified to Start Screen -> Quiz -> Results. All Firebase-related code and UI elements have been removed to ensure the application works locally without any backend setup. -->
+    <!-- Application Structure Plan: Re-introduced a local, form-based authentication step before the quiz. The user flow is: Login Form -> Quiz -> Results. This avoids server-side dependencies while ensuring user identification. The user's name and email are captured and used to pre-populate the results report. -->
     <!-- Visualization & Content Choices: 
-        - All quiz, chart, and statistics elements are retained from the previous version.
-        - The authentication UI (login screen, user info header) has been removed.
-        - The email reporting form now includes an input for the user's name, as it's no longer available from a Google account.
+        - All quiz, chart, and statistics elements are retained.
+        - A new pre-quiz form for Name/Email has been added to the start screen.
+        - The email reporting form on the results screen is now simplified, as the user's name is already known and the recipient email is hardcoded.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -50,10 +50,20 @@
         <!-- Start Screen -->
         <div id="start-screen" class="text-center bg-white p-8 rounded-xl shadow-lg">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Тест на когнитивные способности</h1>
-            <p class="text-lg text-gray-600 mb-8">для инженеров-проектировщиков систем электроснабжения</p>
-            <p class="mb-2">Тест состоит из 15 вопросов. Он поможет оценить ваши профессиональные знания, внимание к деталям и логическое мышление.</p>
+            <p class="text-lg text-gray-600 mb-6">для инженеров-проектировщиков систем электроснабжения</p>
+            <div class="max-w-md mx-auto text-left">
+                <p class="text-center text-gray-700 mb-4">Пожалуйста, введите ваши данные для начала теста.</p>
+                <div class="mb-4">
+                    <label for="login-name" class="block text-sm font-medium text-gray-700">Ваше имя:</label>
+                    <input type="text" id="login-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Иван Иванов">
+                </div>
+                <div class="mb-6">
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">Ваш Email:</label>
+                    <input type="email" id="login-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="ivan.ivanov@example.com">
+                </div>
+            </div>
             <p class="mb-8 font-semibold">На прохождение теста выделяется 15 минут.</p>
-            <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg">Начать тест</button>
+            <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition duration-300 text-lg opacity-50 cursor-not-allowed" disabled>Начать тест</button>
         </div>
 
         <!-- Quiz Screen -->
@@ -94,16 +104,8 @@
 
                 <div id="email-section" class="mt-8 text-left border-t pt-6 max-w-lg mx-auto">
                     <h3 class="text-2xl font-bold mb-4 text-center">Отправить результаты</h3>
-                    <p class="text-center text-gray-600 mb-4">Введите ваше имя и email, на который хотите отправить отчет о прохождении теста.</p>
-                    <div class="mb-4">
-                        <label for="user-name" class="block text-sm font-medium text-gray-700">Ваше имя:</label>
-                        <input type="text" id="user-name" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="Иван Иванов">
-                    </div>
-                    <div class="mb-4">
-                        <label for="user-email" class="block text-sm font-medium text-gray-700">Email для отправки:</label>
-                        <input type="email" id="user-email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="manager@example.com">
-                    </div>
-                    <button id="send-email-btn" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 text-lg">Отправить на Email</button>
+                    <p class="text-center text-gray-600 mb-4">Нажмите кнопку ниже, чтобы отправить отчет о прохождении теста на почту <span class="font-semibold">kirill.bublienko@se.ua</span>.</p>
+                    <button id="send-email-btn" class="w-full bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 text-lg">Отправить результаты руководителю</button>
                     <p class="text-center text-xs text-gray-500 mt-2">Нажатие на кнопку откроет вашу почтовую программу по умолчанию с готовым письмом. Вам останется только нажать "Отправить".</p>
                 </div>
                 
@@ -230,7 +232,10 @@
         const quizScreen = document.getElementById('quiz-screen');
         const resultsScreen = document.getElementById('results-screen');
         
+        const loginNameInput = document.getElementById('login-name');
+        const loginEmailInput = document.getElementById('login-email');
         const startBtn = document.getElementById('start-btn');
+        
         const nextBtn = document.getElementById('next-btn');
         const prevBtn = document.getElementById('prev-btn');
         const restartBtn = document.getElementById('restart-btn');
@@ -254,14 +259,31 @@
         let timerInterval = null;
         let timeSpentPerQuestion = new Array(quizData.length).fill(0);
         let questionStartTime = 0;
-
+        let userName = '';
+        let userEmail = '';
+        
+        loginNameInput.addEventListener('input', checkLoginForm);
+        loginEmailInput.addEventListener('input', checkLoginForm);
         startBtn.addEventListener('click', startQuiz);
         nextBtn.addEventListener('click', nextQuestion);
         prevBtn.addEventListener('click', prevQuestion);
         restartBtn.addEventListener('click', restartQuiz);
         sendEmailBtn.addEventListener('click', sendResultsByEmail);
 
+        function checkLoginForm() {
+            if (loginNameInput.value.trim() !== '' && loginEmailInput.value.trim() !== '' && loginEmailInput.checkValidity()) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
         function startQuiz() {
+            userName = loginNameInput.value.trim();
+            userEmail = loginEmailInput.value.trim();
+
             startScreen.classList.add('hidden');
             quizScreen.classList.remove('hidden');
             resultsScreen.classList.add('hidden');
@@ -275,6 +297,9 @@
         function restartQuiz() {
             resultsScreen.classList.add('hidden');
             startScreen.classList.remove('hidden');
+            loginNameInput.value = '';
+            loginEmailInput.value = '';
+            checkLoginForm();
             if (chartInstance) {
                 chartInstance.destroy();
             }
@@ -457,7 +482,7 @@
         }
 
         function renderReview() {
-            reviewSectionEl.innerHTML = '<h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>'; // Clear previous
+            reviewSectionEl.innerHTML = '<h3 class="text-2xl font-bold mb-4 text-center">Разбор ответов</h3>';
             quizData.forEach((question, index) => {
                 const isCorrect = userAnswers[index] === question.answer;
                 const reviewBlock = document.createElement('div');
@@ -481,18 +506,11 @@
         }
 
         function sendResultsByEmail() {
-            const userName = document.getElementById('user-name').value || 'Не указано';
-            const userEmail = document.getElementById('user-email').value;
-
-            if (!userEmail) {
-                alert('Пожалуйста, введите email для отправки.');
-                return;
-            }
-            
+            const recipientEmail = 'kirill.bublienko@se.ua';
             const score = userAnswers.filter((answer, index) => answer === quizData[index].answer).length;
             
             const subject = `Результаты теста для инженера-проектировщика: ${userName}`;
-            let body = `Здравствуйте!\n\n${userName} прошел(прошла) тест.\n\n`;
+            let body = `Здравствуйте!\n\n${userName} (${userEmail}) прошел(прошла) тест.\n\n`;
             body += `Результат: ${score} из ${quizData.length} правильных ответов.\n\n`;
             body += `----------\nДетальный разбор:\n----------\n\n`;
 
@@ -506,7 +524,7 @@
                 body += `\n`;
             });
             
-            window.location.href = `mailto:${userEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         }
 
     </script>
