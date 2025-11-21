@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Декодер результатов тестирования</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        @import url('https://rsms.me/inter/inter.css'); 
+        .correct-row { border-left: 4px solid #22c55e; background-color: #f0fdf4; }
+        .incorrect-row { border-left: 4px solid #ef4444; background-color: #fef2f2; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen p-4 md:p-8">
+
+    <div class="container mx-auto max-w-5xl">
+        <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg border-t-4 border-blue-600">
+            <h1 class="text-3xl font-bold mb-2 text-center text-gray-900">Декодер результатов</h1>
+            <p class="text-center text-gray-500 mb-8">Система оценки инженеров-проектировщиков</p>
+            
+            <!-- INPUT AREA -->
+            <div id="input-area">
+                <label class="block text-sm font-bold mb-2 text-gray-700">Вставьте код результата (Base64):</label>
+                <textarea id="code-input" class="w-full h-32 p-3 border border-gray-300 rounded-md font-mono text-xs bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="eyJ..."></textarea>
+                <button onclick="decode()" class="mt-4 w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg transform active:scale-95">Расшифровать и проверить</button>
+            </div>
+
+            <!-- OUTPUT AREA -->
+            <div id="output-area" class="hidden mt-8 space-y-8">
+                
+                <!-- SUMMARY CARD -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-sm">
+                    <div>
+                        <span class="text-blue-500 text-xs uppercase font-bold block tracking-wider">Сотрудник</span>
+                        <span id="out-name" class="font-bold text-lg text-gray-800 block truncate"></span>
+                    </div>
+                    <div>
+                        <span class="text-blue-500 text-xs uppercase font-bold block tracking-wider">ID / Дата</span>
+                        <span class="font-mono font-bold text-gray-800 block">
+                            <span id="out-id"></span> <span class="text-gray-400 font-normal">|</span> <span id="out-date" class="text-sm"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-blue-500 text-xs uppercase font-bold block tracking-wider">Общее время</span>
+                        <span id="out-time" class="font-bold text-xl text-gray-800 block"></span>
+                    </div>
+                    <div class="text-left md:text-right">
+                        <span class="text-blue-500 text-xs uppercase font-bold block tracking-wider">Итоговый балл</span>
+                        <span id="out-score" class="font-bold text-3xl text-blue-600 block"></span>
+                    </div>
+                </div>
+
+                <!-- CHARTS & STATS -->
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <!-- Chart -->
+                    <div class="w-full md:w-1/3 bg-white p-4 rounded-lg border border-gray-100 shadow-sm flex justify-center">
+                        <div style="height:240px; width:240px;">
+                            <canvas id="chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats List -->
+                    <div class="w-full md:w-2/3">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Краткая сводка</h3>
+                        <div id="brief-list" class="space-y-2 max-h-[240px] overflow-y-auto pr-2">
+                            <!-- JS populates this -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DETAILED REVIEW -->
+                <div class="mt-12">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        Детальный разбор ответов
+                    </h3>
+                    <div id="detailed-review" class="space-y-6">
+                        <!-- JS populates this -->
+                    </div>
+                </div>
+                
+                <button onclick="location.reload()" class="mt-12 w-full bg-gray-200 py-3 rounded-lg font-bold text-gray-700 hover:bg-gray-300 transition">Очистить и загрузить новый код</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- БАЗА ДАННЫХ ВОПРОСОВ И ОТВЕТОВ ---
+        // Индексы правильных ответов (0-3) для оригинального порядка вопросов
+        // Используем эту структуру для генерации развернутого отчета
+        const fullQuizData = [
+            {
+                id: 0,
+                q: "Ошибка в ТЗ (25А vs 1.5мм)",
+                text: "Вам представлен фрагмент технического задания: «...установить автомат 25 А... Кабель ВВГнг-LS 3х1.5». Какое действие является наиболее правильным?",
+                correctIdx: 2,
+                correctText: "Указать на несоответствие сечения кабеля требованиям ТЗ и автомата защиты.",
+                rationale: "Длительно допустимый ток для кабеля 3х1.5 значительно ниже 25 А, что приведет к перегреву. Замена автомата на 16А может не соответствовать нагрузке."
+            },
+            {
+                id: 1,
+                q: "Логика: 5 автоматов",
+                text: "Пять автоматов (A, B, C, D, E) в ряд. Условия расположения...",
+                correctIdx: 0,
+                correctText: "Коридор, Гостиная, Кухня, Ванная, Спальня",
+                rationale: "Условия 1 и 3 создают блок (Гостиная-Кухня-Ванная-Спальня). Условие 4 ставит Коридор левее Гостиной."
+            },
+            {
+                id: 2,
+                q: "Маркировка КЛ-0,4кВ",
+                text: "Обозначение: КЛ-0,4кВ-АВБбШв-4х120. Что НЕВЕРНО описывает элемент?",
+                correctIdx: 2,
+                correctText: "Кабель имеет медные жилы.",
+                rationale: "Буква 'А' в начале маркировки кабеля (АВБбШв) всегда указывает на то, что жилы выполнены из алюминия."
+            },
+            {
+                id: 3,
+                q: "Расчет: 6 светильников",
+                text: "Помещение 12х8м. 6 светильников (2 ряда по 3). Расстояние между центрами?",
+                correctIdx: 0,
+                correctText: "4 метра по длине и 4 метра по ширине.",
+                rationale: "Длина: 12м / 3 = 4м. Ширина: 8м / 2 = 4м."
+            },
+            {
+                id: 4,
+                q: "Логика: AutoCAD/Revit",
+                text: "Все знают AutoCAD. Некоторые знают Revit. Что верно?",
+                correctIdx: 1,
+                correctText: "Некоторые инженеры отдела знают и AutoCAD, и Revit.",
+                rationale: "Так как 'некоторые' знают Revit, а 'все' знают AutoCAD, то эта группа 'некоторых' владеет обеими программами."
+            },
+            {
+                id: 5,
+                q: "Противоречивые правки",
+                text: "Пункт 3.1: Заменить X на Y. Пункт 5.4: Исключить X. Ваши действия?",
+                correctIdx: 2,
+                correctText: "Уточнить у заказчика или руководителя.",
+                rationale: "При обнаружении противоречивых указаний единственный профессиональный шаг — уточнение информации у источника."
+            },
+            {
+                id: 6,
+                q: "Ряд номиналов",
+                text: "Продолжите ряд: 6А, 10А, 16А...",
+                correctIdx: 2,
+                correctText: "25А",
+                rationale: "Это стандартный ряд номинальных токов (ряд E6) для модульных автоматов."
+            },
+            {
+                id: 7,
+                q: "Потери напряжения",
+                text: "Потери на линиях: 1.2%, 1.5%, 0.9%. Норма до потребителя 3%. Что проверить?",
+                correctIdx: 3,
+                correctText: "Недостаточно данных для ответа.",
+                rationale: "Нормируются суммарные потери от источника (ТП) до потребителя. Без данных о потерях на предыдущих участках (вводной кабель) вывод сделать нельзя."
+            },
+            {
+                id: 8,
+                q: "Норматив (ПУЭ)",
+                text: "Документ для проверки соответствия сечения кабеля и автомата?",
+                correctIdx: 1,
+                correctText: "ПУЭ (Правила улаштування електроустановок)",
+                rationale: "ПУЭ — основной документ, регламентирующий выбор сечений проводников и аппаратов защиты."
+            },
+            {
+                id: 9,
+                q: "Фигура (Г)",
+                text: "Поворот фигуры 'Г' на 90 градусов по часовой стрелке.",
+                correctIdx: 0,
+                correctText: "Буква 'Г' в обычном стоячем положении.",
+                rationale: "Задача на пространственное мышление. Лежащая на длинной стороне 'Г' при повороте встанет вертикально."
+            },
+            {
+                id: 10,
+                q: "Ток КЗ 18.5кА",
+                text: "Нагрузка 45А, Ток КЗ 18.5кА. Выбор автомата?",
+                correctIdx: 3,
+                correctText: "MCCB с номинальным током 50 А.",
+                rationale: "Ток КЗ (18.5 кА) превышает предел обычных модульных автоматов (MCB, обычно до 10-15кА). Требуется литой корпус (MCCB)."
+            },
+            {
+                id: 11,
+                q: "Кабель в грунте",
+                text: "Минимальное горизонтальное расстояние от кабеля до фундамента (ПУЭ)?",
+                correctIdx: 1,
+                correctText: "0.6 метра",
+                rationale: "Согласно ПУЭ (п. 2.3.86), расстояние должно быть не менее 0.6 м."
+            },
+            {
+                id: 12,
+                q: "Освещенность (Лаборатория)",
+                text: "Норма освещенности для точных работ?",
+                correctIdx: 2,
+                correctText: "500 Люкс (Лк)",
+                rationale: "Согласно ДБН В.2.5-28:2018, для лабораторий и точных работ норма составляет 500 Лк."
+            },
+            {
+                id: 13,
+                q: "УЗО в ванную",
+                text: "Защита розеток в ванной (стиральная машина).",
+                correctIdx: 2,
+                correctText: "УЗО 25А / 10мА, тип А",
+                rationale: "Ванная — особо опасное помещение (10мА). Современная техника требует тип А (пульсирующие токи)."
+            },
+            {
+                id: 14,
+                q: "Балансировка нагрузок",
+                text: "Анализ таблицы нагрузок 3-фазного щита. Найти ошибку.",
+                correctIdx: 2,
+                correctText: "Нагрузка на фазу L1 значительно превышает нагрузки на другие фазы.",
+                rationale: "L1 = 1200+2000 = 3200Вт. L2 = 1500Вт. Дисбаланс более 100%, что грубо нарушает требование о балансировке (обычно до 15%)."
+            }
+        ];
+
+        // Маппинг опций для восстановления текста ответов пользователя
+        // Важно: Порядок опций здесь должен совпадать с исходным порядком в rawQuizData файла теста!
+        const optionsMap = [
+             ["Принять чертеж...", "Заменить автомат...", "Указать на несоответствие...", "Запросить доп. инфо..."], // Q0
+             ["Коридор, Гостиная...", "Коридор, Спальня...", "Гостиная, Кухня...", "Коридор, Кухня..."], // Q1
+             ["Это КЛ.", "Номинал 0.4 кВ.", "Кабель имеет медные жилы.", "Кабель четырехжильный."], // Q2
+             ["4м / 4м", "3м / 4м", "6м / 4м", "4м / 2.67м"], // Q3
+             ["Все знают...", "Некоторые знают...", "Никто не знает...", "Если не знает..."], // Q4
+             ["Удалить все...", "Проигнорировать...", "Уточнить у заказчика...", "Выполнить только 3.1..."], // Q5
+             ["20А", "24А", "25А", "30А"], // Q6
+             ["Только вторая...", "Все в норме...", "Вторая и первая...", "Недостаточно данных..."], // Q7
+             ["ДБН...", "ПУЭ...", "ГОСТ...", "Каталог..."], // Q8
+             ["Буква 'Г'...", "Перевернутая...", "Буква 'L'...", "Не изменится."], // Q9
+             ["MCB 50A", "MCCB 63A", "High MCB 50A", "MCCB 50A"], // Q10
+             ["0.25 м", "0.6 м", "1.0 м", "Не нормируется"], // Q11
+             ["300 кд", "500 Лм", "500 Лк", "200 Вт/м²"], // Q12
+             ["УЗО 40А/100мА АС", "УЗО 25А/30мА АС", "УЗО 25А/10мА А", "Диф 16А/30мА B"], // Q13
+             ["Суммарная мощность...", "Кондиционер...", "Дисбаланс фаз...", "Нет ошибок..."] // Q14
+        ];
+
+        let chartInstance = null;
+
+        function decode() {
+            const input = document.getElementById('code-input').value.trim();
+            if(!input) return alert("Введите код!");
+            
+            try {
+                const jsonStr = decodeURIComponent(escape(atob(input)));
+                const data = JSON.parse(jsonStr);
+                
+                // 1. Header Data
+                document.getElementById('out-name').textContent = data.n;
+                document.getElementById('out-id').textContent = data.u;
+                document.getElementById('out-date').textContent = new Date(data.d).toLocaleDateString();
+                
+                let score = 0;
+                let totalSeconds = 0;
+                const briefList = document.getElementById('brief-list');
+                const detailedList = document.getElementById('detailed-review');
+                
+                briefList.innerHTML = '';
+                detailedList.innerHTML = '';
+
+                // Sort results by Question ID
+                const results = data.r.sort((a,b) => a.q - b.q);
+
+                results.forEach(r => {
+                    const qId = r.q;
+                    const userIdx = r.a;
+                    const time = r.t || 0;
+                    totalSeconds += time;
+
+                    const questionData = fullQuizData.find(item => item.id === qId);
+                    const isCorrect = userIdx === questionData.correctIdx;
+                    
+                    if(isCorrect) score++;
+
+                    // --- BRIEF LIST ITEM ---
+                    const briefItem = document.createElement('div');
+                    briefItem.className = "flex justify-between items-center p-2 border-b text-sm";
+                    briefItem.innerHTML = `
+                        <div class="flex items-center">
+                            <span class="w-6 font-bold text-gray-400">${qId + 1}.</span>
+                            <span class="${isCorrect ? 'text-green-700' : 'text-red-600'} font-medium truncate max-w-[150px] md:max-w-[250px]">${questionData.q}</span>
+                        </div>
+                        <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-mono">${time}с</span>
+                    `;
+                    briefList.appendChild(briefItem);
+
+                    // --- DETAILED REVIEW CARD ---
+                    const card = document.createElement('div');
+                    card.className = `p-6 rounded-lg shadow-sm border border-gray-200 ${isCorrect ? 'correct-row' : 'incorrect-row'}`;
+                    
+                    const userText = userIdx !== -1 ? optionsMap[qId][userIdx] : "Нет ответа";
+                    const statusBadge = isCorrect 
+                        ? `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Верно</span>`
+                        : `<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">Ошибка</span>`;
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="font-bold text-lg text-gray-800">Вопрос ${qId + 1}: ${questionData.q}</h4>
+                            ${statusBadge}
+                        </div>
+                        <p class="text-gray-600 mb-4 text-sm italic">${questionData.text}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="bg-white p-3 rounded border ${isCorrect ? 'border-green-200' : 'border-red-200'}">
+                                <span class="block text-xs text-gray-500 font-bold uppercase mb-1">Ответ сотрудника:</span>
+                                <span class="font-medium ${isCorrect ? 'text-green-700' : 'text-red-700'}">${userText}</span>
+                                <div class="mt-1 text-xs text-gray-400">Время: ${time} сек.</div>
+                            </div>
+                            
+                            ${!isCorrect ? `
+                            <div class="bg-green-50 p-3 rounded border border-green-200">
+                                <span class="block text-xs text-green-600 font-bold uppercase mb-1">Правильный ответ:</span>
+                                <span class="font-medium text-green-800">${questionData.correctText}</span>
+                            </div>` : ''}
+                        </div>
+                        
+                        <div class="mt-4 pt-3 border-t border-gray-200/50">
+                            <span class="text-xs font-bold text-gray-400 uppercase mr-2">Аргументация:</span>
+                            <span class="text-sm text-gray-700">${questionData.rationale}</span>
+                        </div>
+                    `;
+                    detailedList.appendChild(card);
+                });
+
+                // --- FILL SUMMARY ---
+                document.getElementById('out-score').textContent = `${score} / 15`;
+                
+                // Format Total Time
+                const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+                const secs = (totalSeconds % 60).toString().padStart(2, '0');
+                document.getElementById('out-time').textContent = `${mins}:${secs}`;
+
+                // --- RENDER CHART ---
+                if(chartInstance) chartInstance.destroy();
+                chartInstance = new Chart(document.getElementById('chart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Верно', 'Неверно'],
+                        datasets: [{
+                            data: [score, 15 - score],
+                            backgroundColor: ['#22c55e', '#ef4444'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                        }
+                    }
+                });
+
+                document.getElementById('input-area').classList.add('hidden');
+                document.getElementById('output-area').classList.remove('hidden');
+
+            } catch(e) {
+                console.error(e);
+                alert("Ошибка! Код некорректен или скопирован не полностью.");
+            }
+        }
+    </script>
+</body>
+</html>
